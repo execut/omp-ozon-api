@@ -1,6 +1,7 @@
 package producer
 
 import (
+    "fmt"
     "sync"
     "time"
 
@@ -60,10 +61,12 @@ func (p *producer) Start() {
                     if err := p.sender.Send(&event); err != nil {
                         p.workerPool.Submit(func() {
                             // ...
+                            fmt.Printf("Failed %v\n", event.ID)
                         })
                     } else {
                         p.workerPool.Submit(func() {
                             // ...
+                            fmt.Printf("Ok %v\n", event.ID)
                         })
                     }
                 case <-p.done:

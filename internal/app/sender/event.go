@@ -5,5 +5,15 @@ import (
 )
 
 type EventSender interface {
-    Send(subdomain *model.KeywordEvent) error
+    Send(keywordEvent *model.KeywordEvent) error
+}
+
+func NewStubEventSender() StubEventSender {
+    return StubEventSender{}
+}
+
+type StubEventSender struct{}
+
+func (StubEventSender) Send(keywordEvent *model.KeywordEvent) error {
+    return nil
 }

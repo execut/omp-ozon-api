@@ -23,3 +23,11 @@ type KeywordEvent struct {
     Status EventStatus
     Entity *Keyword
 }
+
+func NewTestKeyword(id uint64) Keyword {
+    return Keyword{ID: id}
+}
+
+func NewTestKeywordEvent(id uint64, keyword *Keyword) KeywordEvent {
+    return KeywordEvent{ID: id, Type: Created, Status: Deferred, Entity: keyword}
+}

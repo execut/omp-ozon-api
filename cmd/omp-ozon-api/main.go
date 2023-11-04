@@ -1,6 +1,8 @@
 package main
 
 import (
+    "github.com/ozonmp/omp-demo-api/internal/app/repo"
+    "github.com/ozonmp/omp-demo-api/internal/app/sender"
     "os"
     "os/signal"
     "syscall"
@@ -19,6 +21,8 @@ func main() {
         ConsumeSize:    10,
         ProducerCount:  28,
         WorkerCount:    2,
+        Repo:           repo.NewStubEventRepo(300),
+        Sender:         sender.NewStubEventSender(),
     }
 
     retranslator := retranslator.NewRetranslator(cfg)
