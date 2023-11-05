@@ -2,7 +2,7 @@ package repo
 
 import (
     "errors"
-    "github.com/ozonmp/omp-demo-api/internal/model"
+    "github.com/execut/omp-ozon-api/internal/model"
     "sync"
 )
 

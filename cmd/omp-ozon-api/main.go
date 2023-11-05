@@ -1,13 +1,13 @@
 package main
 
 import (
-    "github.com/ozonmp/omp-demo-api/internal/app/repo"
-    "github.com/ozonmp/omp-demo-api/internal/app/sender"
+    "github.com/execut/omp-ozon-api/internal/app/repo"
+    "github.com/execut/omp-ozon-api/internal/app/sender"
     "os"
     "os/signal"
     "syscall"
 
-    "github.com/ozonmp/omp-demo-api/internal/app/retranslator"
+    "github.com/execut/omp-ozon-api/internal/app/retranslator"
 )
 
 func main() {

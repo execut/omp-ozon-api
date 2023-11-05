@@ -1,7 +1,7 @@
 package sender
 
 import (
-    "github.com/ozonmp/omp-demo-api/internal/model"
+    "github.com/execut/omp-ozon-api/internal/model"
 )
 
 type EventSender interface {
