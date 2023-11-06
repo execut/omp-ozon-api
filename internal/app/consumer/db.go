@@ -14,11 +14,10 @@ type Consumer interface {
 }
 
 func NewConsumer(consumersCount uint64, batchSize uint64, eventCh chan<- *model.KeywordEvent, repo repo.EventRepo, tickDuration time.Duration) Consumer {
-    ticker := time.NewTicker(tickDuration)
     timeoutContext, cancelFunc := context.WithCancel(context.Background())
     wg := sync.WaitGroup{}
 
-    return &consumer{batchSize: batchSize, eventCh: eventCh, repo: repo, ticker: ticker, consumersCount: consumersCount, timeoutContext: timeoutContext, cancelFunc: cancelFunc, wg: wg}
+    return &consumer{batchSize: batchSize, eventCh: eventCh, repo: repo, consumersCount: consumersCount, timeoutContext: timeoutContext, cancelFunc: cancelFunc, wg: wg, tickDuration: tickDuration}
 }
 
 type consumer struct {
@@ -28,14 +27,15 @@ type consumer struct {
     batchSize      uint64
     eventCh        chan<- *model.KeywordEvent
     repo           repo.EventRepo
-    ticker         *time.Ticker
+    tickDuration   time.Duration
     wg             sync.WaitGroup
 }
 
 func (c *consumer) Start() {
     for i := uint64(0); i < c.consumersCount; i++ {
         c.wg.Add(1)
-        go func() {
+        ticker := time.NewTicker(c.tickDuration)
+        go func(ticker *time.Ticker) {
             defer c.wg.Done()
             for {
                 events, _ := c.repo.Lock(c.batchSize)
@@ -46,10 +46,10 @@ func (c *consumer) Start() {
                 select {
                 case <-c.timeoutContext.Done():
                     return
-                case <-c.ticker.C:
+                case <-ticker.C:
                 }
             }
-        }()
+        }(ticker)
     }
 }
 
