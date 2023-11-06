@@ -2,6 +2,7 @@ package producer
 
 import (
     "context"
+    "fmt"
     "github.com/execut/omp-ozon-api/internal/app/sender"
     "github.com/execut/omp-ozon-api/internal/model"
     "github.com/gammazero/workerpool"
@@ -45,11 +46,11 @@ func (p *producer) Start() {
                     }
                     if err := p.sender.Send(event); err == nil {
                         p.workerPool.Submit(func() {
-                            // ...
+                            fmt.Printf("%v event processed\n", event.ID)
                         })
                     } else {
                         p.workerPool.Submit(func() {
-                            // ...
+                            fmt.Printf("%v event failed\n", event.ID)
                         })
                     }
                 }

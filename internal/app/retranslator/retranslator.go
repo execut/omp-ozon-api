@@ -16,9 +16,10 @@ type Retranslator interface {
 }
 
 type retranslator struct {
-    consumer consumer.Consumer
-    producer producer.Producer
-    eventCh  chan *model.KeywordEvent
+    consumer   consumer.Consumer
+    producer   producer.Producer
+    eventCh    chan *model.KeywordEvent
+    workerPool *workerpool.WorkerPool
 }
 
 func (r *retranslator) Start() {
@@ -30,21 +31,25 @@ func (r *retranslator) Start() {
 func (r *retranslator) Close() {
     r.consumer.Close()
     r.producer.Close()
+    //r.workerPool.StopWait()
 }
 
 func NewRetranslator(config Config) Retranslator {
-    eventCh := make(chan *model.KeywordEvent)
-    newProducer := producer.NewProducer(eventCh, config.sender, config.producersCount, workerpool.New(1))
-    r := retranslator{consumer: consumer.NewConsumer(config.consumersCount, config.consumerBatchSize, eventCh, config.repo, config.consumerInterval), eventCh: eventCh, producer: newProducer}
+    eventCh := make(chan *model.KeywordEvent, config.ChannelSize)
+    workerPool := workerpool.New(config.WorkerCount)
+    newProducer := producer.NewProducer(eventCh, config.Sender, config.ProducersCount, workerPool)
+    r := retranslator{consumer: consumer.NewConsumer(config.ConsumersCount, config.ConsumerBatchSize, eventCh, config.Repo, config.ConsumerInterval), eventCh: eventCh, producer: newProducer, workerPool: workerPool}
 
     return &r
 }
 
 type Config struct {
-    repo              repo.EventRepo
-    sender            sender.EventSender
-    consumersCount    uint64
-    consumerBatchSize uint64
-    consumerInterval  time.Duration
-    producersCount    uint64
+    ChannelSize       uint64
+    Repo              repo.EventRepo
+    Sender            sender.EventSender
+    ConsumersCount    uint64
+    ConsumerBatchSize uint64
+    ConsumerInterval  time.Duration
+    ProducersCount    uint64
+    WorkerCount       int
 }

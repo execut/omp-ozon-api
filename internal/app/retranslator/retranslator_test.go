@@ -16,12 +16,12 @@ func TestStart(t *testing.T) {
     sender.EXPECT().
         Send(gomock.Any()).Times(1)
     cfg := Config{
-        repo:              rep,
-        sender:            sender,
-        consumersCount:    2,
-        consumerBatchSize: 1,
-        consumerInterval:  time.Nanosecond,
-        producersCount:    1,
+        Repo:              rep,
+        Sender:            sender,
+        ConsumersCount:    2,
+        ConsumerBatchSize: 1,
+        ConsumerInterval:  time.Nanosecond,
+        ProducersCount:    1,
     }
     sut := NewRetranslator(cfg)
 
