@@ -1,10 +1,11 @@
 module github.com/execut/omp-ozon-api
 
-go 1.16
+go 1.18
 
 require (
-	github.com/gammazero/workerpool v1.1.2
 	github.com/golang/mock v1.6.0
-	go.uber.org/mock v0.3.0 // indirect
+	go.uber.org/mock v0.3.0
 	gotest.tools/v3 v3.5.1
 )
+
+require github.com/google/go-cmp v0.5.9 // indirect

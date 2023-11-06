@@ -4,6 +4,7 @@ import (
     "errors"
     "github.com/execut/omp-ozon-api/internal/model"
     "sync"
+    "time"
 )
 
 type EventRepo interface {
@@ -18,7 +19,7 @@ var ErrEventNotFound error = errors.New("Event not found")
 
 var ErrNoMoreEvents error = errors.New("No more events for lock")
 
-func NewStubEventRepo(eventsCount uint64) EventRepo {
+func NewStubEventRepo(eventsCount uint64, lockDuration time.Duration) EventRepo {
     eventsMap := make([]model.KeywordEvent, eventsCount)
     for i := uint64(0); i < eventsCount; i++ {
         keyword := model.NewTestKeyword((i + 1) * 100)
@@ -26,7 +27,7 @@ func NewStubEventRepo(eventsCount uint64) EventRepo {
         eventsMap[i] = keywordEvent
     }
 
-    return &StubEventRepo{mutex: sync.Mutex{}, currentN: 0, lockedEvents: make(map[uint64]bool), events: eventsMap}
+    return &StubEventRepo{mutex: sync.Mutex{}, currentN: 0, lockedEvents: make(map[uint64]bool), events: eventsMap, lockDuration: lockDuration}
 }
 
 type StubEventRepo struct {
@@ -34,9 +35,11 @@ type StubEventRepo struct {
     lockedEvents map[uint64]bool
     mutex        sync.Mutex
     currentN     uint64
+    lockDuration time.Duration
 }
 
 func (r *StubEventRepo) Lock(n uint64) ([]model.KeywordEvent, error) {
+    time.Sleep(r.lockDuration)
     r.mutex.Lock()
     defer r.mutex.Unlock()
     var lockedEvents []model.KeywordEvent
