@@ -8,7 +8,7 @@ import (
 
 func TestStubEventRepo_LockUnlock(t *testing.T) {
     t.Parallel()
-    sut := NewStubEventRepo(7)
+    sut := NewStubEventRepo(7, 0)
     t.Run("Lock test", func(t *testing.T) {
         expectedN := 5
         events, err := sut.Lock(uint64(expectedN))
@@ -31,7 +31,7 @@ func TestStubEventRepo_LockUnlock(t *testing.T) {
 
 func TestStubEventRepo_Lock(t *testing.T) {
     t.Parallel()
-    sut := NewStubEventRepo(7)
+    sut := NewStubEventRepo(7, 0)
     t.Run("Lock twice", func(t *testing.T) {
         sut.Lock(uint64(5))
         events, err := sut.Lock(uint64(5))
@@ -50,7 +50,7 @@ func TestStubEventRepo_LockUnlockParallel(t *testing.T) {
     t.Run("Lock and unlock at parallel", func(t *testing.T) {
         chunksCount := 200
         t.Parallel()
-        sut := NewStubEventRepo(uint64(chunksCount * 5))
+        sut := NewStubEventRepo(uint64(chunksCount*5), 0)
         wg := sync.WaitGroup{}
         eventsIdsCh := make(chan []uint64, chunksCount)
         for i := 0; i < chunksCount; i++ {

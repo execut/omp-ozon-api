@@ -1,33 +1,30 @@
 package retranslator
 
 import (
-	"testing"
-	"time"
-
-	"github.com/execut/omp-ozon-api/internal/mocks"
-	"github.com/golang/mock/gomock"
+    "github.com/execut/omp-ozon-api/internal/app/repo"
+    "github.com/execut/omp-ozon-api/internal/mocks"
+    "go.uber.org/mock/gomock"
+    "testing"
+    "time"
 )
 
 func TestStart(t *testing.T) {
-
+    t.Parallel()
     ctrl := gomock.NewController(t)
-    repo := mocks.NewMockEventRepo(ctrl)
+    rep := repo.NewStubEventRepo(1, 0)
     sender := mocks.NewMockEventSender(ctrl)
-
-    repo.EXPECT().Lock(gomock.Any()).AnyTimes()
-
+    sender.EXPECT().
+        Send(gomock.Any()).Times(1)
     cfg := Config{
-        ChannelSize:    512,
-        ConsumerCount:  2,
-        ConsumeSize:    10,
-        ConsumeTimeout: 10 * time.Second,
-        ProducerCount:  2,
-        WorkerCount:    2,
-        Repo:           repo,
-        Sender:         sender,
+        repo:              rep,
+        sender:            sender,
+        consumersCount:    2,
+        consumerBatchSize: 1,
+        consumerInterval:  time.Nanosecond,
+        producersCount:    1,
     }
+    sut := NewRetranslator(cfg)
 
-    retranslator := NewRetranslator(cfg)
-    retranslator.Start()
-    retranslator.Close()
+    sut.Start()
+    sut.Close()
 }
