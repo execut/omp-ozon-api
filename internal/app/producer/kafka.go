@@ -2,7 +2,7 @@ package producer
 
 import (
     "context"
-    "fmt"
+    "github.com/execut/omp-ozon-api/internal/app/repo"
     "github.com/execut/omp-ozon-api/internal/app/sender"
     "github.com/execut/omp-ozon-api/internal/model"
     "github.com/gammazero/workerpool"
@@ -15,10 +15,10 @@ type Producer interface {
 }
 
 func NewProducer(eventCh chan *model.KeywordEvent, sender sender.EventSender, producersCount uint64,
-    workerPool *workerpool.WorkerPool) Producer {
+    workerPool *workerpool.WorkerPool, repo repo.EventRepo) Producer {
     wg := sync.WaitGroup{}
     ctx, cancel := context.WithCancel(context.Background())
-    return &producer{eventCh, sender, producersCount, ctx, cancel, &wg, workerPool}
+    return &producer{eventCh, sender, producersCount, ctx, cancel, &wg, workerPool, repo}
 }
 
 type producer struct {
@@ -29,11 +29,12 @@ type producer struct {
     cancel         context.CancelFunc
     wg             *sync.WaitGroup
     workerPool     *workerpool.WorkerPool
+    repo           repo.EventRepo
 }
 
 func (p *producer) Start() {
+    p.wg.Add(int(p.producersCount))
     for i := uint64(0); i < p.producersCount; i++ {
-        p.wg.Add(1)
         go func() {
             for {
                 select {
@@ -44,13 +45,18 @@ func (p *producer) Start() {
                     if !ok {
                         return
                     }
+                    p.wg.Add(1)
                     if err := p.sender.Send(event); err == nil {
                         p.workerPool.Submit(func() {
-                            fmt.Printf("%v event processed\n", event.ID)
+                            ids := []uint64{event.ID}
+                            p.repo.Remove(ids)
+                            p.wg.Done()
                         })
                     } else {
                         p.workerPool.Submit(func() {
-                            fmt.Printf("%v event failed\n", event.ID)
+                            ids := []uint64{event.ID}
+                            p.repo.Unlock(ids)
+                            p.wg.Done()
                         })
                     }
                 }
