@@ -55,11 +55,21 @@ func Test_consumer_Close(t *testing.T) {
         eventCh := make(chan *model.KeywordEvent, 2)
         defer close(eventCh)
         c := NewConsumer(1, 1, eventCh, repo.NewStubEventRepo(2, 0), time.Microsecond*10)
-        defer c.Close()
 
         c.Start()
         c.Close()
         time.Sleep(time.Microsecond * 15)
+
+        assert.Equal(t, len(eventCh), 1)
+    })
+    t.Run("Close waits for the repository to done", func(t *testing.T) {
+        t.Parallel()
+        eventCh := make(chan *model.KeywordEvent, 2)
+        defer close(eventCh)
+        c := NewConsumer(1, 1, eventCh, repo.NewStubEventRepo(2, time.Microsecond*10), time.Nanosecond)
+
+        c.Start()
+        c.Close()
 
         assert.Equal(t, len(eventCh), 1)
     })
