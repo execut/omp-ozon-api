@@ -2,6 +2,7 @@ package repo
 
 import (
     "errors"
+    "fmt"
     "github.com/execut/omp-ozon-api/internal/model"
     "sync"
     "time"
@@ -73,11 +74,11 @@ func (r *StubEventRepo) Unlock(eventIDs []uint64) error {
 }
 
 func (r *StubEventRepo) Add(event []model.KeywordEvent) error {
-    //TODO implement me
-    panic("implement me")
+    fmt.Println("Added events", event)
+    return nil
 }
 
 func (r *StubEventRepo) Remove(eventIDs []uint64) error {
-    //TODO implement me
-    panic("implement me")
+    fmt.Println("Removed events", eventIDs)
+    return nil
 }

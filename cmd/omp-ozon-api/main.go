@@ -16,14 +16,15 @@ func main() {
     sigs := make(chan os.Signal, 1)
 
     cfg := retranslator.Config{
-        ChannelSize:       100,
-        ConsumersCount:    100,
-        ConsumerInterval:  time.Millisecond,
-        ConsumerBatchSize: 100,
-        ProducersCount:    100,
-        WorkerCount:       10,
-        Repo:              repo.NewStubEventRepo(100000, time.Millisecond*100),
-        Sender:            sender.NewStubEventSender(),
+        ChannelSize:         100,
+        ConsumersCount:      100,
+        ConsumerInterval:    time.Millisecond,
+        ConsumerBatchSize:   100,
+        ProducersCount:      100,
+        WorkerCount:         10,
+        Repo:                repo.NewStubEventRepo(100000, time.Millisecond*100),
+        Sender:              sender.NewStubEventSender(),
+        WorkerpoolBatchSize: 100,
     }
 
     retranslator := retranslator.NewRetranslator(cfg)

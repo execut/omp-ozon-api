@@ -22,7 +22,7 @@ func Test_producer_Start(t *testing.T) {
         sender := mocks.NewMockEventSender(ctrl)
         sender.EXPECT().
             Send(gomock.Eq(eventLink)).Times(1)
-        sut := NewProducer(eventCh, sender, 1, workerpool.New(1), defaultRepo(ctrl))
+        sut := NewProducer(eventCh, sender, 1, workerpool.New(1), defaultRepo(ctrl), 1)
         defer sut.Close()
 
         sut.Start()
@@ -38,7 +38,7 @@ func Test_producer_Start(t *testing.T) {
         sender := mocks.NewMockEventSender(ctrl)
         sender.EXPECT().
             Send(gomock.Eq(eventLink)).Times(2)
-        sut := NewProducer(eventCh, sender, 2, workerpool.New(1), defaultRepo(ctrl))
+        sut := NewProducer(eventCh, sender, 2, workerpool.New(1), defaultRepo(ctrl), 1)
         defer sut.Close()
 
         sut.Start()
@@ -54,7 +54,7 @@ func Test_producer_Start(t *testing.T) {
         ctrl := gomock.NewController(t)
         sender := mocks.NewMockEventSender(ctrl)
         sender.EXPECT().Send(gomock.Any()).Times(0)
-        sut := NewProducer(eventCh, sender, 1, workerpool.New(1), defaultRepo(ctrl))
+        sut := NewProducer(eventCh, sender, 1, workerpool.New(1), defaultRepo(ctrl), 1)
 
         sut.Start()
         sut.Close()
@@ -75,7 +75,7 @@ func Test_producer_Start(t *testing.T) {
         ids := []uint64{eventLink.ID}
         repo.EXPECT().
             Remove(gomock.Eq(ids)).Times(1)
-        sut := NewProducer(eventCh, sender, 1, workerpool.New(1), repo)
+        sut := NewProducer(eventCh, sender, 1, workerpool.New(1), repo, 1)
 
         sut.Start()
         eventCh <- eventLink
@@ -83,9 +83,10 @@ func Test_producer_Start(t *testing.T) {
     })
     t.Run("Workerpool pass failed events ids to repo.Unlock", func(t *testing.T) {
         t.Parallel()
-        eventCh := make(chan *model.KeywordEvent)
+        eventCh := make(chan *model.KeywordEvent, 1)
         defer close(eventCh)
         eventLink := newEventLink()
+        eventCh <- eventLink
         ctrl := gomock.NewController(t)
         sender := mocks.NewMockEventSender(ctrl)
         sender.EXPECT().Send(gomock.Any()).Return(errors.New("Connection failed"))
@@ -93,10 +94,54 @@ func Test_producer_Start(t *testing.T) {
         ids := []uint64{eventLink.ID}
         repo.EXPECT().
             Unlock(gomock.Eq(ids)).Times(1)
-        sut := NewProducer(eventCh, sender, 1, workerpool.New(1), repo)
+        sut := NewProducer(eventCh, sender, 1, workerpool.New(1), repo, 1)
 
         sut.Start()
+        sut.Close()
+    })
+    t.Run("Workerpool pass failed events ids to repo.Unlock as batch", func(t *testing.T) {
+        t.Parallel()
+        eventCh := make(chan *model.KeywordEvent, 2)
+        defer close(eventCh)
+        eventLink := newEventLink()
         eventCh <- eventLink
+        eventCh <- eventLink
+        ctrl := gomock.NewController(t)
+        sender := mocks.NewMockEventSender(ctrl)
+        sender.EXPECT().
+            Send(gomock.Any()).
+            Return(errors.New("Connection failed")).
+            AnyTimes()
+        repo := mocks.NewMockEventRepo(ctrl)
+        ids := []uint64{eventLink.ID, eventLink.ID}
+        repo.EXPECT().
+            Unlock(gomock.Eq(ids)).
+            Times(1)
+        sut := NewProducer(eventCh, sender, 1, workerpool.New(1), repo, 2)
+
+        sut.Start()
+        sut.Close()
+    })
+    t.Run("Workerpool pass success events ids to repo.Remove as batch", func(t *testing.T) {
+        t.Parallel()
+        eventCh := make(chan *model.KeywordEvent, 2)
+        defer close(eventCh)
+        eventLink := newEventLink()
+        eventCh <- eventLink
+        eventCh <- eventLink
+        ctrl := gomock.NewController(t)
+        sender := mocks.NewMockEventSender(ctrl)
+        sender.EXPECT().
+            Send(gomock.Any()).
+            AnyTimes()
+        repo := mocks.NewMockEventRepo(ctrl)
+        ids := []uint64{eventLink.ID, eventLink.ID}
+        repo.EXPECT().
+            Remove(gomock.Eq(ids)).
+            Times(1)
+        sut := NewProducer(eventCh, sender, 1, workerpool.New(1), repo, 3)
+
+        sut.Start()
         sut.Close()
     })
 }

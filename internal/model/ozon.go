@@ -1,5 +1,7 @@
 package model
 
+import "strconv"
+
 type Keyword struct {
     ID uint64
 }
@@ -30,4 +32,8 @@ func NewTestKeyword(id uint64) Keyword {
 
 func NewTestKeywordEvent(id uint64, keyword *Keyword) KeywordEvent {
     return KeywordEvent{ID: id, Type: Created, Status: Deferred, Entity: keyword}
+}
+
+func (k KeywordEvent) String() string {
+    return strconv.FormatUint(k.ID, 10)
 }
