@@ -1,74 +1,56 @@
 package retranslator
 
 import (
-	"time"
-
-	"github.com/ozonmp/omp-demo-api/internal/app/consumer"
-	"github.com/ozonmp/omp-demo-api/internal/app/producer"
-	"github.com/ozonmp/omp-demo-api/internal/app/repo"
-	"github.com/ozonmp/omp-demo-api/internal/app/sender"
-	"github.com/ozonmp/omp-demo-api/internal/model"
-
-	"github.com/gammazero/workerpool"
+    "github.com/execut/omp-ozon-api/internal/app/consumer"
+    "github.com/execut/omp-ozon-api/internal/app/producer"
+    "github.com/execut/omp-ozon-api/internal/app/repo"
+    "github.com/execut/omp-ozon-api/internal/app/sender"
+    "github.com/execut/omp-ozon-api/internal/model"
+    "github.com/gammazero/workerpool"
+    "time"
 )
 
 type Retranslator interface {
-	Start()
-	Close()
-}
-
-type Config struct {
-	ChannelSize uint64
-
-	ConsumerCount  uint64
-	ConsumeSize    uint64
-	ConsumeTimeout time.Duration
-
-	ProducerCount uint64
-	WorkerCount   int
-
-	Repo   repo.EventRepo
-	Sender sender.EventSender
+    Start()
+    Close()
 }
 
 type retranslator struct {
-	events     chan model.SubdomainEvent
-	consumer   consumer.Consumer
-	producer   producer.Producer
-	workerPool *workerpool.WorkerPool
-}
-
-func NewRetranslator(cfg Config) Retranslator {
-	events := make(chan model.SubdomainEvent, cfg.ChannelSize)
-	workerPool := workerpool.New(cfg.WorkerCount)
-
-	consumer := consumer.NewDbConsumer(
-		cfg.ConsumerCount,
-		cfg.ConsumeSize,
-		cfg.ConsumeTimeout,
-		cfg.Repo,
-		events)
-	producer := producer.NewKafkaProducer(
-		cfg.ProducerCount,
-		cfg.Sender,
-		events,
-		workerPool)
-
-	return &retranslator{
-		events:     events,
-		consumer:   consumer,
-		producer:   producer,
-		workerPool: workerPool,
-	}
+    consumer   consumer.Consumer
+    producer   producer.Producer
+    eventCh    chan *model.KeywordEvent
+    workerPool *workerpool.WorkerPool
 }
 
 func (r *retranslator) Start() {
-	r.producer.Start()
-	r.consumer.Start()
+    r.consumer.Start()
+    r.producer.Start()
+
 }
 
 func (r *retranslator) Close() {
-	r.consumer.Close()
-	r.producer.Close()
-	r.workerPool.StopWait()
+    r.consumer.Close()
+    r.producer.Close()
+    //r.workerPool.StopWait()
+}
+
+func NewRetranslator(config Config) Retranslator {
+    eventCh := make(chan *model.KeywordEvent, config.ChannelSize)
+    workerPool := workerpool.New(config.WorkerCount)
+    newProducer := producer.NewProducer(eventCh, config.Sender, config.ProducersCount, workerPool, config.Repo, config.WorkerpoolBatchSize)
+    r := retranslator{consumer: consumer.NewConsumer(config.ConsumersCount, config.ConsumerBatchSize, eventCh, config.Repo, config.ConsumerInterval), eventCh: eventCh, producer: newProducer, workerPool: workerPool}
+
+    return &r
+}
+
+type Config struct {
+    ChannelSize         uint64
+    Repo                repo.EventRepo
+    Sender              sender.EventSender
+    ConsumersCount      uint64
+    ConsumerBatchSize   uint64
+    ConsumerInterval    time.Duration
+    ProducersCount      uint64
+    WorkerCount         int
+    WorkerpoolBatchSize uint64
 }

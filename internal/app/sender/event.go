@@ -1,9 +1,19 @@
 package sender
 
 import (
-	"github.com/ozonmp/omp-demo-api/internal/model"
+    "github.com/execut/omp-ozon-api/internal/model"
 )
 
 type EventSender interface {
-	Send(subdomain *model.SubdomainEvent) error
+    Send(keywordEvent *model.KeywordEvent) error
+}
+
+func NewStubEventSender() StubEventSender {
+    return StubEventSender{}
+}
+
+type StubEventSender struct{}
+
+func (StubEventSender) Send(keywordEvent *model.KeywordEvent) error {
+    return nil
 }

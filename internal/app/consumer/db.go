@@ -1,86 +1,59 @@
 package consumer
 
 import (
-	"sync"
-	"time"
-
-	"github.com/ozonmp/omp-demo-api/internal/app/repo"
-	"github.com/ozonmp/omp-demo-api/internal/model"
+    "context"
+    "github.com/execut/omp-ozon-api/internal/app/repo"
+    "github.com/execut/omp-ozon-api/internal/model"
+    "sync"
+    "time"
 )
 
 type Consumer interface {
-	Start()
-	Close()
+    Start()
+    Close()
+}
+
+func NewConsumer(consumersCount uint64, batchSize uint64, eventCh chan<- *model.KeywordEvent, repo repo.EventRepo, tickDuration time.Duration) Consumer {
+    timeoutContext, cancelFunc := context.WithCancel(context.Background())
+    wg := sync.WaitGroup{}
+
+    return &consumer{batchSize: batchSize, eventCh: eventCh, repo: repo, consumersCount: consumersCount, timeoutContext: timeoutContext, cancelFunc: cancelFunc, wg: wg, tickDuration: tickDuration}
 }
 
 type consumer struct {
-	n      uint64
-	events chan<- model.SubdomainEvent
-
-	repo repo.EventRepo
-
-	batchSize uint64
-	timeout   time.Duration
-
-	done chan bool
-	wg   *sync.WaitGroup
-}
-
-type Config struct {
-	n         uint64
-	events    chan<- model.SubdomainEvent
-	repo      repo.EventRepo
-	batchSize uint64
-	timeout   time.Duration
-}
-
-func NewDbConsumer(
-	n uint64,
-	batchSize uint64,
-	consumeTimeout time.Duration,
-	repo repo.EventRepo,
-	events chan<- model.SubdomainEvent) Consumer {
-
-	wg := &sync.WaitGroup{}
-	done := make(chan bool)
-
-	return &consumer{
-		n:         n,
-		batchSize: batchSize,
-		timeout:   consumeTimeout,
-		repo:      repo,
-		events:    events,
-		wg:        wg,
-		done:      done,
-	}
+    cancelFunc     context.CancelFunc
+    timeoutContext context.Context
+    consumersCount uint64
+    batchSize      uint64
+    eventCh        chan<- *model.KeywordEvent
+    repo           repo.EventRepo
+    tickDuration   time.Duration
+    wg             sync.WaitGroup
 }
 
 func (c *consumer) Start() {
-	for i := uint64(0); i < c.n; i++ {
-		c.wg.Add(1)
+    for i := uint64(0); i < c.consumersCount; i++ {
+        c.wg.Add(1)
+        ticker := time.NewTicker(c.tickDuration)
+        go func(ticker *time.Ticker) {
+            defer c.wg.Done()
+            for {
+                events, _ := c.repo.Lock(c.batchSize)
+                for i, _ := range events {
+                    c.eventCh <- &events[i]
+                }
 
-		go func() {
-			defer c.wg.Done()
-			ticker := time.NewTicker(c.timeout)
-			for {
-				select {
-				case <-ticker.C:
-					events, err := c.repo.Lock(c.batchSize)
-					if err != nil {
-						continue
-					}
-					for _, event := range events {
-						c.events <- event
-					}
-				case <-c.done:
-					return
-				}
-			}
-		}()
-	}
+                select {
+                case <-c.timeoutContext.Done():
+                    return
+                case <-ticker.C:
+                }
+            }
+        }(ticker)
+    }
 }
 
 func (c *consumer) Close() {
-	close(c.done)
-	c.wg.Wait()
+    c.cancelFunc()
+    c.wg.Wait()
 }
